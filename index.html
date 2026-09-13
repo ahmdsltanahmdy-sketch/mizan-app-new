@@ -259,7 +259,7 @@
             try {
                 const cacheTime = localStorage.getItem('mizan_cache_time');
                 const now = new Date().getTime();
-                const CACHE_TTL = 30 * 1000;
+                const CACHE_TTL = 10 * 1000; // کاهش زمان کش برای نمایش آنی اخبار جدید
 
                 if (!force) {
                     const cached = localStorage.getItem('mizan_cache');
@@ -625,6 +625,7 @@
                 const r = await res.json();
                 if (r.status === 'success') {
                     document.getElementById('commentTextInput').value = '';
+                    document.getElementById('commentAuthorInput').value = '';
                     alert('نظر شما ثبت شد و پس از بررسی منتشر خواهد شد.');
                     loadNewsComments(currentSelectedNews.link);
                 } else { alert(r.message || 'خطا در ثبت نظر.'); }
@@ -668,6 +669,7 @@
                 if (result.status === "success") {
                     alert('سوال با موفقیت ثبت شد.');
                     document.getElementById('questionInput').value = '';
+                    localStorage.removeItem('mizan_cache');
                     initApp(true);
                 } else { alert(result.message || 'خطا در ثبت سوال.'); }
             } catch (err) { alert('خطا در ارتباط با سرور.'); }
