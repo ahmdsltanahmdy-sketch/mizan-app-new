@@ -246,7 +246,7 @@
         let generatedCardBlob = null;
         let isSubmittingComment = false;
 
-        const FIRST_NEWS_IMAGE = 'https://raw.githubusercontent.com/ahmdsltanahmdy-sketch/mizan-miniapp/main/photo_2026-08-13_21-34-20.jpg';
+        const FIRST_NEWS_IMAGE = 'https://raw.githubusercontent.com/ahmdsltanahmdy-sketch/mizan-app-new/main/photo_2026-09-13_11-27-56.jpg';
 
         function updateDateTime() {
             const now = new Date();
@@ -259,7 +259,7 @@
             try {
                 const cacheTime = localStorage.getItem('mizan_cache_time');
                 const now = new Date().getTime();
-                const CACHE_TTL = 30 * 1000; // بهبود یافته به 30 ثانیه
+                const CACHE_TTL = 30 * 1000;
 
                 if (!force) {
                     const cached = localStorage.getItem('mizan_cache');
