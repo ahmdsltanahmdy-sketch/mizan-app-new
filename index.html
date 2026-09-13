@@ -259,7 +259,7 @@
             try {
                 const cacheTime = localStorage.getItem('mizan_cache_time');
                 const now = new Date().getTime();
-                const CACHE_TTL = 5 * 1000; // بروزرسانی لحظه‌ای ۵ ثانیه‌ای
+                const CACHE_TTL = 5 * 1000;
 
                 if (!force) {
                     const cached = localStorage.getItem('mizan_cache');
