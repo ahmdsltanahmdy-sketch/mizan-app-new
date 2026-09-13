@@ -250,41 +250,31 @@
 
         function updateDateTime() {
             const now = new Date();
-            document.getElementById('liveDateTime').innerText = now.toLocaleDateString('fa-IR', { calendar: 'persian', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const dtEl = document.getElementById('liveDateTime');
+            if (dtEl) {
+                dtEl.innerText = now.toLocaleDateString('fa-IR', { calendar: 'persian', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
         }
         setInterval(updateDateTime, 1000);
         updateDateTime();
 
         async function initApp(force = false) {
             try {
-                const cacheTime = localStorage.getItem('mizan_cache_time');
                 const now = new Date().getTime();
-                const CACHE_TTL = 3 * 1000; // تنظیم روی ۳ ثانیه برای دریافت آنی اطلاعات
-
-                if (!force) {
-                    const cached = localStorage.getItem('mizan_cache');
-                    if (cached && cacheTime && (now - parseInt(cacheTime) < CACHE_TTL)) {
-                        appData = JSON.parse(cached);
-                        if (!currentCategory || currentCategory === '') {
-                            const firstActive = (appData.tabs || []).find(t => String(t.is_active).toLowerCase() === 'true' || t.is_active === 1);
-                            currentCategory = firstActive ? String(firstActive.tab_id || firstActive.category).trim().toLowerCase() : 'all';
-                        }
-                        renderTabs();
-                        renderNews();
-                        renderLegalSystems();
-                        renderOfficialMessages();
-                        return;
-                    }
-                }
-
                 const response = await fetch(API_URL + "?t=" + now);
                 appData = await response.json();
-                localStorage.setItem('mizan_cache', JSON.stringify(appData));
-                localStorage.setItem('mizan_cache_time', now.toString());
+
+                if (!appData.tabs || !Array.isArray(appData.tabs)) {
+                    appData.tabs = [
+                        { tab_id: 'all', tab_name: 'کل اخبار', is_active: true },
+                        { tab_id: 'judicial', tab_name: 'قضایی', is_active: true },
+                        { tab_id: 'humanrights', tab_name: 'حقوق بشر', is_active: true }
+                    ];
+                }
 
                 if (!currentCategory || currentCategory === '') {
-                    const firstActive = (appData.tabs || []).find(t => String(t.is_active).toLowerCase() === 'true' || t.is_active === 1);
-                    currentCategory = firstActive ? String(firstActive.tab_id || firstActive.category).trim().toLowerCase() : 'all';
+                    const firstActive = (appData.tabs || []).find(t => String(t.is_active).toLowerCase() === 'true' || t.is_active === 1 || t.is_active === true);
+                    currentCategory = firstActive ? String(firstActive.tab_id || firstActive.category || 'all').trim().toLowerCase() : 'all';
                 }
 
                 renderTabs();
@@ -294,6 +284,7 @@
                 loadCloudBookmarks();
             } catch (error) {
                 console.error("Error loading data:", error);
+                document.getElementById('newsListContainer').innerHTML = '<p class="text-center text-red-500 py-8 text-xs">خطا در بارگذاری اطلاعات از سرور.</p>';
             }
         }
 
@@ -302,11 +293,9 @@
 
         async function manualRefresh() {
             const icon = document.getElementById('refreshIcon');
-            icon.classList.add('fa-spin');
-            localStorage.removeItem('mizan_cache');
-            localStorage.removeItem('mizan_cache_time');
+            if (icon) icon.classList.add('fa-spin');
             await initApp(true);
-            setTimeout(() => icon.classList.remove('fa-spin'), 600);
+            setTimeout(() => { if (icon) icon.classList.remove('fa-spin'); }, 600);
             alert('اخبار با موفقیت بروزرسانی شد.');
         }
 
@@ -328,7 +317,11 @@
 
         function renderTabs() {
             const container = document.getElementById('tabsContainer');
-            if (!appData.tabs || appData.tabs.length === 0) return;
+            if (!container) return;
+            if (!appData.tabs || appData.tabs.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
 
             const activeTabs = appData.tabs.filter(t => {
                 let v = t.is_active;
@@ -356,6 +349,7 @@
             const container = document.getElementById('newsListContainer');
             const featuredContainer = document.getElementById('featuredNewsContainer');
             const loadMoreBtn = document.getElementById('loadMoreContainer');
+            if (!container || !featuredContainer) return;
 
             let uniqueNewsMap = new Map();
             (appData.news || []).forEach(item => {
@@ -374,7 +368,7 @@
             if (!filteredNews || filteredNews.length === 0) {
                 featuredContainer.innerHTML = '';
                 container.innerHTML = '<p class="text-center text-slate-400 py-8 text-xs font-medium">هیچ خبری در این دسته‌بندی ثبت نشده است.</p>';
-                loadMoreBtn.classList.add('hidden');
+                if (loadMoreBtn) loadMoreBtn.classList.add('hidden');
                 return;
             }
 
@@ -407,10 +401,12 @@
                 </div>
             `).join('');
 
-            if (filteredNews.length > displayedNewsCount) {
-                loadMoreBtn.classList.remove('hidden');
-            } else {
-                loadMoreBtn.classList.add('hidden');
+            if (loadMoreBtn) {
+                if (filteredNews.length > displayedNewsCount) {
+                    loadMoreBtn.classList.remove('hidden');
+                } else {
+                    loadMoreBtn.classList.add('hidden');
+                }
             }
         }
 
@@ -421,6 +417,7 @@
 
         function handleLiveSearch(query) {
             const box = document.getElementById('liveSuggestionsBox');
+            if (!box) return;
             const q = query.trim().toLowerCase();
             if (!q) { box.classList.add('hidden'); box.innerHTML = ''; return; }
 
@@ -458,7 +455,8 @@
 
         function closeSuggestionsOnClickOutside(event) {
             if (!event.target.closest('#searchInput') && !event.target.closest('#liveSuggestionsBox')) {
-                document.getElementById('liveSuggestionsBox').classList.add('hidden');
+                const box = document.getElementById('liveSuggestionsBox');
+                if (box) box.classList.add('hidden');
             }
         }
 
@@ -585,6 +583,7 @@
 
         async function loadCloudBookmarks() {
             const container = document.getElementById('bookmarksContainer');
+            if (!container) return;
             try {
                 const res = await fetch(API_URL + "?action=bookmarks&userId=" + userId);
                 const bookmarks = await res.json();
@@ -596,6 +595,7 @@
         async function loadNewsComments(newsLink) {
             const container = document.getElementById('commentsListContainer');
             const badge = document.getElementById('pendingCommentsBadge');
+            if (!container) return;
             container.innerHTML = 'در حال بارگذاری نظرات...';
             try {
                 const res = await fetch(API_URL + "?action=comments&newsLink=" + encodeURIComponent(newsLink));
@@ -614,8 +614,7 @@
             if (!text) return alert('لطفاً متن نظر خود را وارد کنید.');
 
             isSubmittingComment = true;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
             try {
                 const res = await fetch(API_URL, {
                     method: 'POST',
@@ -630,7 +629,7 @@
                     loadNewsComments(currentSelectedNews.link);
                 } else { alert(r.message || 'خطا در ثبت نظر.'); }
             } catch (err) { alert('خطا در ارتباط با سرور.'); }
-            finally { isSubmittingComment = false; submitBtn.disabled = false; submitBtn.innerText = 'ثبت'; }
+            finally { isSubmittingComment = false; if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'ثبت'; } }
         }
 
         function shareCurrentNews() {
@@ -641,6 +640,7 @@
 
         function renderLegalSystems() {
             const container = document.getElementById('legalSystemsContainer');
+            if (!container) return;
             if (!appData.legalSystems || !appData.legalSystems.length) return;
             container.innerHTML = appData.legalSystems.map(sys => `<div class="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center justify-between"><div><h3 class="font-bold text-xs text-red-600 dark:text-red-400">${sys.title}</h3><p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${sys.description}</p></div><a href="${sys.url}" target="_blank" class="bg-red-50 dark:bg-slate-800 text-red-600 dark:text-red-400 px-3.5 py-1.5 rounded-xl text-xs font-bold transition">ورود</a></div>`).join('');
         }
@@ -648,6 +648,7 @@
         function renderOfficialMessages() {
             const container = document.getElementById('officialMessagesContainer');
             const badge = document.getElementById('pendingBadge');
+            if (!container) return;
             if (!appData.faq || !appData.faq.length) return;
             const officialFaq = appData.faq.filter(item => item.laws_ref && item.laws_ref.includes('mizanonline.ir/fa/message') && item.answer && !item.answer.includes('در صف بررسی'));
             const pendingQuestions = appData.faq.filter(item => !item.answer || item.answer.includes('در صف بررسی'));
@@ -669,7 +670,6 @@
                 if (result.status === "success") {
                     alert('سوال با موفقیت ثبت شد.');
                     document.getElementById('questionInput').value = '';
-                    localStorage.removeItem('mizan_cache');
                     initApp(true);
                 } else { alert(result.message || 'خطا در ثبت سوال.'); }
             } catch (err) { alert('خطا در ارتباط با سرور.'); }
@@ -678,6 +678,7 @@
         async function sendAiMessage() {
             const input = document.getElementById('aiChatInput');
             const chatBox = document.getElementById('chatBox');
+            if (!input || !chatBox) return;
             let rawQ = input.value.trim();
             if (!rawQ) return;
             chatBox.innerHTML += `<div class="bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-200 p-2.5 rounded-xl text-left border border-red-100 dark:border-red-900/30">شما: ${rawQ}</div>`;
@@ -695,11 +696,13 @@
                     body: JSON.stringify({ action: 'ai_chat', query: rawQ })
                 });
                 const r = await res.json();
-                document.getElementById(loadingId).remove();
+                const loadEl = document.getElementById(loadingId);
+                if (loadEl) loadEl.remove();
                 chatBox.innerHTML += `<div class="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl leading-relaxed whitespace-pre-line text-slate-800 dark:text-slate-200">${r.reply || 'پاسخی دریافت نشد.'}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             } catch (e) {
-                document.getElementById(loadingId).remove();
+                const loadEl = document.getElementById(loadingId);
+                if (loadEl) loadEl.remove();
                 chatBox.innerHTML += `<div class="bg-red-50 text-red-600 p-2.5 rounded-xl">خطا در ارتباط با هوش مصنوعی.</div>`;
             }
         }
